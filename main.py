@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
         ) as checkpointer:
             await checkpointer.asetup()
             agent_chat_router.set_agent(agent_chat_router.build_agent(checkpointer))
-            print("✓ 灵犀智能体就绪（Redis 记忆已启用）")
+            print("[ok] 灵犀智能体就绪（Redis 记忆已启用）")
             yield
     except Exception as e:
         print(f"[warn] Redis/智能体初始化失败，智能对话功能不可用：{e}")
