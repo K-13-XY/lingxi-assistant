@@ -1,0 +1,29 @@
+{
+  "active_wal_number": 5,
+  "current_seq": 29,
+  "index_specs": {
+    "vector": {
+      "build_params": {},
+      "field_name": "vector",
+      "index_type": "HNSW",
+      "metric_type": "COSINE",
+      "search_params": {}
+    }
+  },
+  "manifest_format_version": 2,
+  "partitions": {
+    "_default": {
+      "data_files": [
+        "data/data_000001_000011.parquet",
+        "data/data_000012_000019.parquet",
+        "data/data_000021_000028.parquet"
+      ],
+      "delta_files": [
+        "delta/delta_000020_000020.parquet",
+        "delta/delta_000029_000029.parquet"
+      ]
+    }
+  },
+  "schema_version": 1,
+  "version": 5
+}

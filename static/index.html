@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>灵犀 · AI 助手</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #ffffff; color: #333; height: 100vh; display: flex; overflow: hidden; }
+
+        /* 侧边栏 */
+        .sidebar { width: 240px; background: #f7f7f8; border-right: 1px solid #e5e5e5; display: flex; flex-direction: column; padding: 20px 12px; flex-shrink: 0; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; margin-bottom: 30px; padding: 0 8px; }
+        .brand-logo { color: #10a37f; font-size: 24px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; cursor: pointer; margin-bottom: 6px; background: transparent; border: none; width: 100%; text-align: left; font-size: 15px; color: #333; }
+        .nav-item:hover, .nav-item.active { background-color: #e5e5e5; }
+
+        /* 主内容区 */
+        .main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #fff; height: 100vh; }
+        .topbar { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+        .badge { font-size: 12px; color: #10a37f; background: #e6f4f1; padding: 5px 10px; border-radius: 12px; font-weight: 500; }
+
+        /* 视图容器 */
+        .view-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%; }
+        .hidden-view { display: none !important; }
+        .active-view { display: flex !important; }
+
+        /* 聊天区 */
+        .messages { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 24px; }
+        #view-chat .messages { max-width: 800px; width: 100%; margin: 0 auto; }
+
+        /* 欢迎卡片 */
+        .welcome-card { margin: auto; text-align: center; max-width: 480px; padding: 40px; background: #fafafa; border-radius: 16px; border: 1px solid #eee; }
+        .welcome-logo { font-size: 48px; margin-bottom: 20px; }
+        .chips { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .chip { padding: 10px 16px; border: 1px solid #ddd; border-radius: 20px; background: #fff; cursor: pointer; font-size: 14px; }
+        .chip:hover { border-color: #10a37f; color: #10a37f; }
+
+        /* 聊天气泡 */
+        .msg-row { display: flex; gap: 12px; }
+        .msg-row.user { justify-content: flex-end; }
+        .msg-bubble { max-width: 75%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; font-size: 15px; }
+        .msg-row.user .msg-bubble { background: #10a37f; color: white; border-bottom-right-radius: 2px; }
+        .msg-row.ai .msg-bubble { background: #f1f1f1; color: #333; border-bottom-left-radius: 2px; }
+
+        /* 输入框区域 */
+        .input-area { display: flex; gap: 10px; background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 8px; margin: 0 24px 24px; flex-shrink: 0; max-width: 800px; width: calc(100% - 48px); }
+        #view-chat .input-area { margin: 0 auto 24px; max-width: 800px; width: 100%; }
+        #view-kb .input-area { max-width: none; margin: 0 0 24px; }
+        textarea { flex: 1; border: none; outline: none; resize: none; padding: 10px; font-size: 15px; max-height: 120px; height: 44px; background: transparent; }
+        .send-btn { background: #10a37f; color: #fff; border: none; border-radius: 8px; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .send-btn:hover { background: #0e906f; }
+
+        /* 知识库专用布局 */
+        .kb-layout { flex: 1; display: flex; height: 100%; overflow: hidden; }
+
+        /* 【重点修复】左侧文档库 */
+        .docs-panel {
+            width: 280px; background: #f9f9f9; border-right: 1px solid #eee;
+            display: flex; flex-direction: column;
+            flex-shrink: 0;
+            min-height: 0; /* 允许被压缩 */
+            padding: 20px;
+        }
+        /* 固定头部：标题和上传区不会因为滚动而消失 */
+        .docs-header {
+            flex-shrink: 0;
+        }
+        .drop-zone {
+            border: 2px dashed #ccc; border-radius: 8px; text-align: center;
+            padding: 30px; margin: 15px 0; background: #fff; cursor: pointer;
+        }
+        .drop-zone:hover { border-color: #10a37f; color: #10a37f; }
+        .docs-hint { font-size: 12px; color: #888; margin-bottom: 10px; }
+
+        /* 【新增】文档列表滚动区域 */
+        .doc-list-container {
+            flex: 1;
+            min-height: 0; /* 允许被压缩 */
+            overflow-y: auto; /* 启用独立滚动 */
+            padding-right: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        /* 美化滚动条 */
+        .doc-list-container::-webkit-scrollbar { width: 6px; }
+        .doc-list-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+        /* 右侧聊天区 */
+        .kb-chat-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+        .messages::-webkit-scrollbar { width: 6px; }
+        .messages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; padding: 10px; }
+            .brand-name, .nav-text { display: none; }
+            .docs-panel { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+        <div class="brand"><div class="brand-logo">✦</div><span class="brand-name">灵犀</span></div>
+        <nav>
+            <button class="nav-item active" onclick="switchView('view-chat', this)"><span>💬</span><span class="nav-text">智能对话</span></button>
+            <button class="nav-item" onclick="switchView('view-kb', this)"><span>📚</span><span class="nav-text">知识库</span></button>
+            <button class="nav-item" onclick="logout()"><span>🚪</span><span class="nav-text">退出登录</span></button>
+        </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main">
+        <header class="topbar">
+            <h1 class="view-title" id="topbar-title">智能对话</h1>
+            <span class="badge">🟢 服务在线</span>
+        </header>
+
+        <!-- 智能对话视图 -->
+        <div class="view-container active-view" id="view-chat">
+            <div class="messages" id="agent-messages">
+                <div class="welcome-card">
+                    <div class="welcome-logo">✦</div>
+                    <h2>你好，我是灵犀</h2>
+                    <p>极简、高效的 AI 助手。支持多轮对话与知识库问答，点击下方快捷提问试试！</p>
+                    <div class="chips">
+                        <button class="chip" onclick="quickAsk('现在几点了？')">🕐 现在几点了？</button>
+                        <button class="chip" onclick="quickAsk('给我讲个笑话')">😂 讲个笑话</button>
+                        <button class="chip" onclick="quickAsk('帮我记住我喜欢喝咖啡')">☕ 帮我记住偏好</button>
+                    </div>
+                </div>
+            </div>
+            <div class="input-area">
+                <textarea id="agent-input" placeholder="输入消息，Enter 发送，Shift+Enter 换行" onkeydown="handleEnter(event, 'agent')"></textarea>
+                <button class="send-btn" onclick="sendMessage('agent')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+            </div>
+        </div>
+
+        <!-- 知识库问答视图 -->
+        <div class="view-container hidden-view" id="view-kb">
+            <div class="kb-layout">
+                <!-- 左侧文档库（修复滚动区） -->
+                <div class="docs-panel">
+                    <div class="docs-header">
+                        <h3>📂 文档库</h3>
+                        <div class="drop-zone" onclick="document.getElementById('file-input').click()">
+                            <div style="font-size: 30px; margin-bottom: 10px;">📄</div>
+                            <p>点击上传</p>
+                            <input type="file" id="file-input" hidden accept=".txt,.md,.pdf,.csv,.xlsx">
+                        </div>
+                        <p class="docs-hint">支持 txt / md / pdf / csv / xlsx</p>
+                        <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 10px;">
+                    </div>
+
+                    <!-- 文档列表滚动区 -->
+                    <div class="doc-list-container" id="doc-list">
+                        <!-- 内容通过JS动态加载到这里 -->
+                        <div style="color: #aaa; font-size: 14px; text-align: center; padding: 20px;">暂无文档</div>
+                    </div>
+                </div>
+
+                <!-- 右侧聊天区 -->
+                <div class="kb-chat-panel">
+                    <div class="messages" id="kb-messages">
+                        <div class="welcome-card">
+                            <div class="welcome-logo">📚</div>
+                            <h2>基于文档的智能问答</h2>
+                            <p>上传文档后，向我提问，我会基于文档内容作答并标明引用来源。</p>
+                        </div>
+                    </div>
+                    <div class="input-area">
+                        <textarea id="kb-input" placeholder="输入关于文档的问题..." onkeydown="handleEnter(event, 'kb')"></textarea>
+                        <button class="send-btn" onclick="sendMessage('kb')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SOURCES_MARKER = '===SOURCES===';
+        const agentSessionId = 'sess-' + Math.random().toString(36).slice(2, 10);
+
+        /* ---------- 鉴权：未登录跳转到登录页 ---------- */
+        (function checkAuth() {
+            if (!localStorage.getItem('token')) window.location.href = '/login.html';
+        })();
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            window.location.href = '/login.html';
+        }
+
+        /* ---------- 工具 ---------- */
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function escapeAttr(s) { return escapeHtml(s).replace(/`/g, '&#96;'); }
+
+        function toast(msg, isError) {
+            let el = document.getElementById('toast');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'toast';
+                el.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:11px 22px;border-radius:10px;font-size:13px;z-index:999;transition:opacity .25s;';
+                document.body.appendChild(el);
+            }
+            el.style.background = isError ? '#b0696e' : '#333';
+            el.textContent = msg;
+            el.style.opacity = '1';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => { el.style.opacity = '0'; }, 2800);
+        }
+
+        /* ---------- 切换视图 ---------- */
+        function switchView(viewId, btn) {
+            document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active-view'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active-view');
+            btn.classList.add('active');
+            document.getElementById('topbar-title').innerText = viewId === 'view-chat' ? '智能对话' : '知识库问答';
+        }
+
+        function handleEnter(e, type) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(type); }
+        }
+
+        function quickAsk(text) {
+            document.getElementById('agent-input').value = text;
+            sendMessage('agent');
+        }
+
+        /* ---------- 气泡 ---------- */
+        function addBubble(container, text, role) {
+            const row = document.createElement('div');
+            row.className = 'msg-row ' + (role === 'user' ? 'user' : 'ai');
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble';
+            bubble.textContent = text;
+            row.appendChild(bubble);
+            container.appendChild(row);
+            return bubble;
+        }
+
+        function hideWelcome(container) {
+            const w = container.querySelector('.welcome-card');
+            if (w) w.style.display = 'none';
+        }
+
+        /* ---------- 发送消息（对接后端） ---------- */
+        function sendMessage(type) {
+            const input = document.getElementById(type === 'agent' ? 'agent-input' : 'kb-input');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            input.style.height = '44px';
+            if (type === 'agent') sendAgentMessage(text);
+            else sendKbQuestion(text);
+        }
+
+        /* ---------- 智能对话（SSE 流式） ---------- */
+        async function sendAgentMessage(text) {
+            const msgBox = document.getElementById('agent-messages');
+            hideWelcome(msgBox);
+            addBubble(msgBox, text, 'user');
+            const bubble = addBubble(msgBox, '正在思考...', 'ai');
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'text/event-stream',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                    },
+                    body: JSON.stringify({ message: text, session_id: agentSessionId }),
+                });
+                if (res.status === 401) { window.location.href = '/login.html'; return; }
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || ('HTTP ' + res.status));
+                bubble.textContent = '';
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        try {
+                            const data = JSON.parse(line.slice(6).trim());
+                            if (data.type === 'token') bubble.textContent += data.content;
+                            else if (data.type === 'error') bubble.textContent = '出错了：' + (data.content || '未知错误');
+                        } catch (e) { /* 忽略无法解析的行 */ }
+                    }
+                    msgBox.scrollTop = msgBox.scrollHeight;
+                }
+            } catch (e) {
+                bubble.textContent = '请求失败：' + e.message;
+            }
+            msgBox.scrollTop = msgBox.scrollHeight;
+        }
+
+        /* ---------- 知识库问答（流式 + 引用来源） ---------- */
+        async function sendKbQuestion(text) {
+            const msgBox = document.getElementById('kb-messages');
+            hideWelcome(msgBox);
+            addBubble(msgBox, text, 'user');
+            const bubble = addBubble(msgBox, '正在思考...', 'ai');
+            try {
+                const res = await fetch('/api/chat/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: text }),
+                });
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || ('HTTP ' + res.status));
+                bubble.textContent = '';
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let raw = '';
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    raw += decoder.decode(value, { stream: true });
+                    const idx = raw.indexOf(SOURCES_MARKER);
+                    bubble.textContent = idx >= 0 ? raw.slice(0, idx) : raw;
+                    msgBox.scrollTop = msgBox.scrollHeight;
+                }
+                const idx = raw.indexOf(SOURCES_MARKER);
+                if (idx >= 0) {
+                    bubble.textContent = raw.slice(0, idx);
+                    try { renderSources(bubble, JSON.parse(raw.slice(idx + SOURCES_MARKER.length).trim())); } catch (e) { /* 来源解析失败，忽略 */ }
+                } else {
+                    bubble.textContent = raw;
+                }
+            } catch (e) {
+                bubble.textContent = '请求失败：' + e.message;
+            }
+            msgBox.scrollTop = msgBox.scrollHeight;
+        }
+
+        function renderSources(container, sources) {
+            if (!sources || !sources.length) {
+                const d = document.createElement('div');
+                d.style.cssText = 'margin-top:10px;font-size:13px;color:#999;';
+                d.textContent = '未检索到相关内容';
+                container.appendChild(d);
+                return;
+            }
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'margin-top:12px;font-size:13px;color:#666;border-top:1px solid #eee;padding-top:10px;';
+            const title = document.createElement('div');
+            title.textContent = '📚 引用来源（' + sources.length + ' 条）';
+            title.style.cssText = 'font-weight:600;margin-bottom:6px;color:#10a37f;';
+            wrap.appendChild(title);
+            sources.forEach((s) => {
+                const item = document.createElement('div');
+                item.style.cssText = 'margin-bottom:8px;padding:8px 10px;background:#f7f7f8;border-radius:8px;line-height:1.5;';
+                item.innerHTML = '<div style="color:#999;font-size:12px;">' + escapeHtml(s.source) + ' · 相似度 ' + (s.score != null ? Number(s.score).toFixed(4) : '-') + '</div>' +
+                    '<div>' + escapeHtml(s.text) + '</div>';
+                wrap.appendChild(item);
+            });
+            container.appendChild(wrap);
+        }
+
+        /* ---------- 文档管理 ---------- */
+        function fileIcon(name) {
+            const ext = (name.split('.').pop() || '').toLowerCase();
+            return ({ pdf: '📕', md: '📘', txt: '📄', csv: '📊', xlsx: '📗' })[ext] || '📄';
+        }
+
+        async function refreshDocs() {
+            const list = document.getElementById('doc-list');
+            if (!list) return;
+            try {
+                const res = await fetch('/api/documents');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const { documents } = await res.json();
+                if (!documents || !documents.length) {
+                    list.innerHTML = '<div style="color:#aaa;font-size:14px;text-align:center;padding:20px;">暂无文档</div>';
+                    return;
+                }
+                list.innerHTML = documents.map((d) =>
+                    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid #eee;border-radius:8px;background:#fff;">' +
+                    '<div style="min-width:0;">' +
+                    '<div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeAttr(d.filename) + '">' + fileIcon(d.filename) + ' ' + escapeHtml(d.filename) + '</div>' +
+                    '<div style="font-size:11px;color:#999;margin-top:2px;">' + d.chunk_count + ' 切片 · ' + escapeHtml(d.uploaded_at) + '</div>' +
+                    '</div>' +
+                    '<button onclick="deleteDoc(\'' + d.doc_id + '\', \'' + escapeAttr(d.filename) + '\')" style="border:none;background:transparent;color:#999;cursor:pointer;font-size:16px;padding:2px 6px;" title="删除">✕</button>' +
+                    '</div>'
+                ).join('');
+            } catch (e) {
+                list.innerHTML = '<div style="color:#b0696e;font-size:14px;text-align:center;padding:20px;">加载失败：' + escapeHtml(e.message) + '</div>';
+            }
+        }
+
+        async function uploadFile(file) {
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const res = await fetch('/api/documents/upload', { method: 'POST', body: fd });
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || ('HTTP ' + res.status));
+                const data = await res.json();
+                toast('「' + data.filename + '」入库完成：' + data.chunk_count + ' 个切片');
+                refreshDocs();
+            } catch (e) {
+                toast('上传失败：' + e.message, true);
+            }
+        }
+
+        async function deleteDoc(docId, filename) {
+            if (!confirm('确定删除文档「' + filename + '」？')) return;
+            try {
+                const res = await fetch('/api/documents/' + encodeURIComponent(docId), { method: 'DELETE' });
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || ('HTTP ' + res.status));
+                toast('已删除 ' + filename);
+                refreshDocs();
+            } catch (e) {
+                toast('删除失败：' + e.message, true);
+            }
+        }
+
+        /* ---------- 健康检查 ---------- */
+        async function refreshHealth() {
+            const badge = document.querySelector('.badge');
+            if (!badge) return;
+            try {
+                const res = await fetch('/api/health');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const h = await res.json();
+                const ok = h.status === 'ok' && h.deepseek && h.deepseek.configured;
+                badge.textContent = ok ? '🟢 服务在线' : '🟡 部分异常';
+            } catch (e) {
+                badge.textContent = '🔴 服务离线';
+            }
+        }
+
+        /* ---------- 初始化 ---------- */
+        document.getElementById('file-input').addEventListener('change', function (e) {
+            if (e.target.files.length > 0) {
+                uploadFile(e.target.files[0]);
+                e.target.value = '';
+            }
+        });
+
+        refreshDocs();
+        refreshHealth();
+        setInterval(refreshHealth, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+INFO:     Started server process [5764]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[warn] Redis/智能体初始化失败，智能对话功能不可用：'gbk' codec can't encode character '\u2713' in position 0: illegal multibyte sequence
+INFO:     127.0.0.1:54382 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54387 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54389 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54391 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54393 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54395 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54397 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54399 - "POST /api/chat HTTP/1.1" 200 OK
+I0827 13:58:51.467203   19288 chttp2_transport.cc:1393] ipv4:127.0.0.1:54383: Got goaway [11] err=UNAVAILABLE:GOAWAY received; Error code: 11; Debug Text: too_many_pings {http2_error:11}
+E0827 13:58:51.467607   19288 chttp2_transport.cc:1425] ipv4:127.0.0.1:54383: Received a GOAWAY with error code ENHANCE_YOUR_CALM and debug data equal to "too_many_pings". Current keepalive time (before throttling): 10000ms

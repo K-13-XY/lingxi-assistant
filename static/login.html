@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 · 灵犀 AI 助手</title>
+  <style>
+    :root { --grad: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(160deg, #eef0ff 0%, #f6f7fc 45%, #f3e8ff 100%);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .card {
+      width: 420px; background: #fff; border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(76, 81, 191, .18); padding: 42px 40px 36px;
+    }
+    .logo {
+      width: 60px; height: 60px; border-radius: 18px; background: var(--grad); color: #fff;
+      font-size: 28px; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
+      box-shadow: 0 10px 28px rgba(99, 102, 241, .35);
+    }
+    .card h1 { text-align: center; font-size: 23px; color: #1f2430; margin-bottom: 6px; letter-spacing: 1px; }
+    .subtitle { text-align: center; font-size: 13px; color: #9aa3b2; margin-bottom: 28px; }
+    .tabs { display: flex; background: #f2f3f8; border-radius: 12px; padding: 4px; margin-bottom: 24px; }
+    .tabs button {
+      flex: 1; border: none; background: transparent; padding: 10px; font-size: 14px; cursor: pointer;
+      color: #6b7280; border-radius: 9px; transition: all .2s; font-family: inherit;
+    }
+    .tabs button.active { background: #fff; color: #6366f1; font-weight: 600; box-shadow: 0 2px 8px rgba(30,34,60,.08); }
+    .form { display: none; }
+    .form.active { display: block; }
+    .form label { display: block; font-size: 13px; color: #6b7280; margin-bottom: 6px; }
+    .form input {
+      width: 100%; padding: 12px 15px; border: 1px solid #e6e8f0; border-radius: 12px;
+      font-size: 14.5px; margin-bottom: 14px; outline: none; transition: all .2s; font-family: inherit;
+    }
+    .form input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, .12); }
+    .form button[type="submit"] {
+      width: 100%; padding: 12px; border: none; border-radius: 12px; background: var(--grad);
+      color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .2s; font-family: inherit;
+      box-shadow: 0 8px 18px rgba(99, 102, 241, .3);
+    }
+    .form button[type="submit"]:hover { opacity: .9; }
+    .form button[type="submit"]:disabled { opacity: .6; cursor: not-allowed; }
+    .error { color: #e5484d; font-size: 13px; text-align: center; margin-bottom: 12px; min-height: 18px; }
+    .toast {
+      position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+      background: #16a34a; color: #fff; padding: 11px 26px; border-radius: 10px; font-size: 14px;
+      opacity: 0; transition: opacity .3s; z-index: 100; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="card">
+  <div class="logo">✦</div>
+  <h1>灵犀 AI 助手</h1>
+  <p class="subtitle">智能对话 · 知识库问答</p>
+
+  <div class="tabs">
+    <button id="tabLogin" class="active">登录</button>
+    <button id="tabRegister">注册</button>
+  </div>
+
+  <form class="form active" id="formLogin">
+    <div class="error" id="errorLogin"></div>
+    <label>用户名</label>
+    <input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="username" autofocus>
+    <label>密码</label>
+    <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+    <button type="submit">登 录</button>
+  </form>
+
+  <form class="form" id="formRegister">
+    <div class="error" id="errorRegister"></div>
+    <label>用户名</label>
+    <input type="text" id="regUsername" placeholder="请输入用户名" autocomplete="username">
+    <label>密码</label>
+    <input type="password" id="regPassword" placeholder="至少 6 位密码" autocomplete="new-password">
+    <label>确认密码</label>
+    <input type="password" id="regPassword2" placeholder="再次输入密码" autocomplete="new-password">
+    <button type="submit">注 册</button>
+  </form>
+</div>
+
+<script>
+(function () {
+  if (localStorage.getItem("token")) window.location.href = "/";
+})();
+
+const tabLogin = document.getElementById("tabLogin");
+const tabRegister = document.getElementById("tabRegister");
+const formLogin = document.getElementById("formLogin");
+const formRegister = document.getElementById("formRegister");
+const errorLogin = document.getElementById("errorLogin");
+const errorRegister = document.getElementById("errorRegister");
+const toast = document.getElementById("toast");
+
+function switchTab(isLogin) {
+  tabLogin.classList.toggle("active", isLogin);
+  tabRegister.classList.toggle("active", !isLogin);
+  formLogin.classList.toggle("active", isLogin);
+  formRegister.classList.toggle("active", !isLogin);
+  errorLogin.textContent = "";
+  errorRegister.textContent = "";
+}
+
+tabLogin.addEventListener("click", () => switchTab(true));
+tabRegister.addEventListener("click", () => switchTab(false));
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2000);
+}
+
+formLogin.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("loginUsername").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  if (!username || !password) { errorLogin.textContent = "请填写用户名和密码"; return; }
+  errorLogin.textContent = "";
+  const btn = formLogin.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = "登录中...";
+
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "登录失败");
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("username", data.username);
+    window.location.href = "/";
+  } catch (err) {
+    errorLogin.textContent = err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = "登 录";
+  }
+});
+
+formRegister.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("regUsername").value.trim();
+  const password = document.getElementById("regPassword").value;
+  const password2 = document.getElementById("regPassword2").value;
+  errorRegister.textContent = "";
+
+  if (!username) { errorRegister.textContent = "请输入用户名"; return; }
+  if (password.length < 6) { errorRegister.textContent = "密码至少 6 位"; return; }
+  if (password !== password2) { errorRegister.textContent = "两次密码不一致"; return; }
+
+  const btn = formRegister.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = "注册中...";
+
+  try {
+    const res = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "注册失败");
+    showToast(data.message || "注册成功！");
+    document.getElementById("regUsername").value = "";
+    document.getElementById("regPassword").value = "";
+    document.getElementById("regPassword2").value = "";
+    switchTab(true);
+    document.getElementById("loginUsername").value = username;
+    document.getElementById("loginPassword").focus();
+  } catch (err) {
+    errorRegister.textContent = err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = "注 册";
+  }
+});
+</script>
+</body>
+</html>
