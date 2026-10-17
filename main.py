@@ -21,9 +21,11 @@ from settings import DATABASE_URL, REDIS_URL
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-
+# 异步上下文管理器
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print("访问地址：http://localhost:8000/login.html")
+    print("接口文档：http://localhost:8000/docs")
     # 1. 用户系统依赖 PostgreSQL（连接失败不阻塞 RAG 功能）
     try:
         await PyPool.ainit(DATABASE_URL)
@@ -36,7 +38,9 @@ async def lifespan(app: FastAPI):
             redis_url=REDIS_URL,
             ttl={"default_ttl": -1, "refresh_on_read": True},  # -1：永不过期
         ) as checkpointer:
+            # Langgraph异步持久化初始方法asetup)
             await checkpointer.asetup()
+            # 创建带记忆的agent放到路由中
             agent_chat_router.set_agent(agent_chat_router.build_agent(checkpointer))
             print("[ok] 灵犀智能体就绪（Redis 记忆已启用）")
             yield
@@ -50,8 +54,8 @@ async def lifespan(app: FastAPI):
             pass
     print("服务已关闭")
 
-
-app = FastAPI(title="灵犀智能助手", version="1.0.0", lifespan=lifespan)
+# 绑定应用的生命周期
+app = FastAPI(title="灵犀智能助手", version="1.0.1", lifespan=lifespan)
 
 # 注册所有路由（认证 / 智能体对话 / RAG 问答 / 文档管理 / 健康检查）
 app.include_router(auth_router.router)
@@ -63,7 +67,7 @@ app.include_router(health.router)
 # 前端静态资源
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-
+# include_in_schema=False 将这个接口从自动生成的 API 文档中隐藏起来
 @app.get("/", include_in_schema=False)
 def index():
     return FileResponse(STATIC_DIR / "index.html")

@@ -277,7 +277,7 @@
                     },
                     body: JSON.stringify({ message: text, session_id: agentSessionId }),
                 });
-                if (res.status === 401) { window.location.href = '/login.html'; return; }
+                if (res.status === 401) { logout(); return; }
                 if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || ('HTTP ' + res.status));
                 bubble.textContent = '';
                 const reader = res.body.getReader();
