@@ -105,7 +105,7 @@ pip install -r requirements.txt
 CREATE TABLE tb_user (
     uid   SERIAL PRIMARY KEY,
     uname VARCHAR(64) UNIQUE NOT NULL,
-    pwd   VARCHAR(128) NOT NULL,
+    pwd   VARCHAR(255) NOT NULL,
     birth DATE,
     ctime TIMESTAMP DEFAULT now(),
     info  JSONB
@@ -152,6 +152,5 @@ uvicorn main:app --reload --port 8000
 
 ## 待优化事项
 
-- **密码哈希**
 - **token持久（重启要重登」根治）**
  -**上传接口加固（加鉴权 + 真正校验大小 + 清洗文件名）**
